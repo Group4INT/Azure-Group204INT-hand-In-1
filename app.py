@@ -1,40 +1,24 @@
-# ***************************************
-# Imports
-# ***************************************
 # Dash
 import dash
 from dash import html
 from dash import dcc
 from dash.dependencies import Input, Output
 
-# Div.
-import pandas as pd
-import numpy as np
-
 # Plotly
 import plotly.express as px
-import plotly.graph_objects as go
 
-# ***************************************
 # Get data
-# ***************************************
 import dataModel
 order = dataModel.get_data()
 df_year = dataModel.get_year()
 df_month = dataModel.get_month()
 
 
-# ***************************************
-# Activate the app
-# ***************************************
-# app = dash.Dash(__name__)
 
 dash_app = dash.Dash(__name__)
 app = dash_app.server
 
-# ***************************************
 # Layout
-# ***************************************
 dash_app.layout = html.Div(
     children=[
         html.Div(className='row',
@@ -101,16 +85,7 @@ dash_app.layout = html.Div(
     ]
 )
 
-# ***************************************
-# Callbacks
-# ***************************************
-# Output er diagrammet
-# Input er DropDown
-
-
-# # ***************************************
 # # Diagram - Product Sales
-# # ***************************************
 
 @ dash_app.callback(Output('sales_product', 'figure'),
                     [Input('drop_month', 'value')],
@@ -118,26 +93,21 @@ dash_app.layout = html.Div(
 def update_graph(drop_month, drop_year):
     if drop_year:
         if drop_month:
-            # Data i både drop_month og drop_year
             order_fig1 = order.loc[(order['orderyear'] == drop_year) & (
                 order['ordermonth'] == drop_month)]
         else:
-            # Data i drop_year. men ikke drop_month
             order_fig1 = order.loc[order['orderyear'] == drop_year]
     else:
         if drop_month:
-            # Data i drop_month, men ikke drop_year
             order_fig1 = order.loc[order['ordermonth'] == drop_month]
         else:
-            # Ingen data - ikke noget valgt
             order_fig1 = order
 
     return px.bar(order_fig1, x="productname", y="total", title="Sales by product",  color='type', labels={'total': 'Total sales', 'productname': 'Product name', 'type': 'Product Type'})
 
 
-# ***************************************
-# Diagram - Employee Sales
-# # ***************************************
+
+# Employee Sales  Diagram 
 
 @dash_app.callback(Output('sales_employee', 'figure'),
                    [Input('drop_month2', 'value')],
@@ -145,18 +115,14 @@ def update_graph(drop_month, drop_year):
 def update_graph(drop_month, drop_year):
     if drop_year:
         if drop_month:
-            # Data i både drop_month og drop_year
             order_fig1 = order.loc[(order['orderyear'] == drop_year) & (
                 order['ordermonth'] == drop_month)]
         else:
-            # Data i drop_year. men ikke drop_month
             order_fig1 = order.loc[order['orderyear'] == drop_year]
     else:
         if drop_month:
-            # Data i drop_month, men ikke drop_year
             order_fig1 = order.loc[order['ordermonth'] == drop_month]
         else:
-            # Ingen data - ikke noget valgt
             order_fig1 = order
 
     return px.bar(order_fig1,
@@ -166,8 +132,6 @@ def update_graph(drop_month, drop_year):
                   labels={'total': 'Total sales', 'emp_name': 'Employee', 'type': 'Product Type'})
 
 
-# ***************************************
 # Run the app
-# ***************************************
 if __name__ == '__main__':
     dash_app.run_server(debug=True)
