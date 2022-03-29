@@ -1,137 +1,69 @@
-# Dash
-import dash
-from dash import html
-from dash import dcc
-from dash.dependencies import Input, Output
+# Imports
+import pandas as pd
+import numpy as np
+import calendar
 
-# Plotly
-import plotly.express as px
+# ***************************************
+# Import af datamodel
+# ***************************************
 
-# Get data
-import dataModel
-order = dataModel.get_data()
-df_year = dataModel.get_year()
-df_month = dataModel.get_month()
+githubpath = './data/'
 
-
-
-dash_app = dash.Dash(__name__)
-app = dash_app.server
-
-# Layout
-dash_app.layout = html.Div(
-    children=[
-        html.Div(className='row',
-                 children=[
-                     html.Div(className='four columns div-user-controls',
-                              children=[
-                                  html.H2('Sales dashboard'),
-                                  html.P('Select filters from dropdown'),
-
-                                  html.Div(children="Month",
-                                           className="menu-title"),
-                                  dcc.Dropdown(
-                                      id='drop_month',
-                                      options=[{'label': selectmonth, 'value': selectmonth}
-                                               for selectmonth in df_month['monthnames']],
-                                  ),
-                                  html.Div(children="Year",
-                                           className="menu-title"),
-                                  dcc.Dropdown(
-                                      id='drop_year',
-                                      options=[
-                                         {'label': selectyear, 'value': selectyear} for selectyear in df_year]
-                                  ),
-                              ]
-                              ),
-                     html.Div(className='eight columns div-for-charts bg-grey',
-                              children=[
-                                  dcc.Graph(id="sales_product",
-
-                                            )
-                              ]
-                              ),
-                     html.Div(className='four columns div-user-controls',
-                              children=[
-                                  html.H2('Sales dashboard'),
-                                  html.P('Select filters from dropdown'),
-
-                                  html.Div(children="Month",
-                                           className="menu-title"),
-                                  dcc.Dropdown(
-                                      id='drop_month2',
-                                      options=[{'label': selectmonth, 'value': selectmonth}
-                                               for selectmonth in df_month['monthnames']],
-                                  ),
-                                  html.Div(children="Year",
-                                           className="menu-title"),
-                                  dcc.Dropdown(
-                                      id='drop_year2',
-                                      options=[
-                                          {'label': selectyear, 'value': selectyear} for selectyear in df_year]
-                                  ),
-                              ]
-                              ),
-                     html.Div(className='eight columns div-for-charts bg-grey',
-                                        children=[
-                                            dcc.Graph(id="sales_employee",
-
-                                                      )
-                                        ]
-                              ),
-
-                 ]
-                 )
-    ]
-)
-
-# # Diagram - Product Sales
-
-@ dash_app.callback(Output('sales_product', 'figure'),
-                    [Input('drop_month', 'value')],
-                    [Input('drop_year', 'value')])
-def update_graph(drop_month, drop_year):
-    if drop_year:
-        if drop_month:
-            order_fig1 = order.loc[(order['orderyear'] == drop_year) & (
-                order['ordermonth'] == drop_month)]
-        else:
-            order_fig1 = order.loc[order['orderyear'] == drop_year]
-    else:
-        if drop_month:
-            order_fig1 = order.loc[order['ordermonth'] == drop_month]
-        else:
-            order_fig1 = order
-
-    return px.bar(order_fig1, x="productname", y="total", title="Sales by product",  color='type', labels={'total': 'Total sales', 'productname': 'Product name', 'type': 'Product Type'})
+# Import from Excel file, 4 different sheets
+df_customers = pd.read_excel(githubpath + "my_shop_data.xlsx", sheet_name="customers")
+df_order = pd.read_excel(githubpath + "my_shop_data.xlsx", sheet_name="order")
+df_employee = pd.read_excel(githubpath + "my_shop_data.xlsx", sheet_name="employee")
+df_products = pd.read_excel(githubpath + "my_shop_data.xlsx", sheet_name="products")
 
 
 
-# Employee Sales  Diagram 
+def get_data():
+    # Employee name
+    df_employee['emp_name'] = df_employee['firstname'] + ' ' + df_employee['lastname']
 
-@dash_app.callback(Output('sales_employee', 'figure'),
-                   [Input('drop_month2', 'value')],
-                   [Input('drop_year2', 'value')])
-def update_graph(drop_month, drop_year):
-    if drop_year:
-        if drop_month:
-            order_fig1 = order.loc[(order['orderyear'] == drop_year) & (
-                order['ordermonth'] == drop_month)]
-        else:
-            order_fig1 = order.loc[order['orderyear'] == drop_year]
-    else:
-        if drop_month:
-            order_fig1 = order.loc[order['ordermonth'] == drop_month]
-        else:
-            order_fig1 = order
+    # Customers name
+    df_customers['cust_name'] = df_customers['first_name'] + ' ' + df_customers['last_name']
 
-    return px.bar(order_fig1,
-                  x='emp_name', y='total',
-                  color='type',  title='Sales by Employee',
-                  hover_data=[],
-                  labels={'total': 'Total sales', 'emp_name': 'Employee', 'type': 'Product Type'})
+    # Data - Add: total, order, year, month
+    df_order['total'] = df_order['unitprice'] * df_order['quantity']
+    df_order['deliverytime'] = df_order['deliverydate'] - df_order['orderdate']
+    df_order['orderyear'] = df_order['orderdate'].dt.strftime("%Y")
+    df_order['ordermonth'] = pd.to_datetime(df_order['orderdate'])
+    df_order['ordermonth'] = df_order['ordermonth'].dt.month_name()
+
+    # ***************************************
+    # Data - Relationer
+    # ***************************************
+    order = pd.merge(df_order, df_products, on='product_id')
+    order = pd.merge(order, df_employee, on='employee_id')
+    order = pd.merge(order, df_customers, on='customer_id')
+
+    # Order - Select colomns
+    order = order[['order_id', 
+                'product_id', 'productname', 'type',
+                'customer_id', 'cust_name', 'city', 'country',
+                'employee_id', 'emp_name', 
+                'orderdate', 'deliverydate', 'deliverytime', 'orderyear', 'ordermonth',
+                'total']]
+
+    # Retuner til app.py
+    return order
 
 
-# Run the app
-if __name__ == '__main__':
-    dash_app.run_server(debug=True)
+def get_year():
+    # Year - Create a dataframe with years usede in the order dataframe
+    df_year = df_order['orderdate'].dt.strftime("%Y").unique()
+    df_year.sort()
+
+    return df_year
+
+
+def get_month():
+        # Month - Create a dataframe with month names
+    months = []
+    for x in range(1, 13):
+        months.append(calendar.month_name[x])
+
+    df_month = pd.DataFrame(months, columns=["monthnames"])
+
+    return df_month
